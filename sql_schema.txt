@@ -1,0 +1,76 @@
+--- SQL schema ---
+
+CREATE TABLE Participants (
+    identifier INTEGER PRIMARY KEY,
+    last_name TEXT,
+    first_name TEXT
+);
+
+CREATE TABLE Tasks (
+    id INTEGER PRIMARY KEY,
+    participant_id INTEGER REFERENCES Participants,
+    task_no INTEGER,
+    success BOOLEAN,
+    time_elapsed FLOAT
+);
+
+CREATE TABLE LoadNasa (
+    id INTEGER PRIMARY KEY,
+    task_no INTEGER,
+    participant_id INTEGER REFERENCES Participants,
+    mental_demand INTEGER,
+    physical_demand INTEGER,
+    temporal_demand INTEGER,
+    performance INTEGER,
+    effort INTEGER,
+    frustration INTEGER
+);
+
+/* Filled in post-hoc from GazePoint data */
+CREATE TABLE LoadPupil (
+    id INTEGER PRIMARY KEY,
+    identifier INTEGER,
+    task_no INTEGER,
+    load_score INTEGER
+);
+
+CREATE TABLE Antisaccade (
+    id INTEGER PRIMARY KEY,
+    participant_id INTEGER REFERENCES Participants,
+    item_no INTEGER,
+    success BOOLEAN
+);
+
+CREATE TABLE VisualArrays (
+    id INTEGER PRIMARY KEY,
+    participant_id INTEGER REFERENCES Participants,
+    item_no INTEGER,
+    success BOOLEAN
+);
+
+CREATE TABLE Flanker (
+    id INTEGER PRIMARY KEY,
+    participant_id INTEGER REFERENCES Participants,
+    item_no INTEGER,
+    success BOOLEAN
+);
+
+CREATE TABLE Stroop (
+    id INTEGER PRIMARY KEY,
+    participant_id INTEGER REFERENCES Participants,
+    item_no INTEGER,
+    success BOOLEAN
+);
+
+/* Filled in post-hoc from UoH data */
+CREATE TABLE Wais (
+    id INTEGER PRIMARY KEY,
+    identifier INTEGER,
+    vci INTEGER,
+    poi INTEGER,
+    wmi INTEGER,
+    psi INTEGER,
+    verbal INTEGER,
+    performance INTEGER,
+    full_scale INTEGER
+);
