@@ -87,7 +87,7 @@ def trial_tasks(db, identifier: int):
 
     # loop through each task
     for i, x in enumerate(task_order):
-        input("\n"+f"ENTER to begin task {i+1}")
+        input("\n"+f"ENTER to begin task {i+1} : {task_map[x]}")
         begin = time.time()
         # count down from three minutes
         remaining = 3*60
@@ -111,11 +111,23 @@ def trial_tasks(db, identifier: int):
         # rounded elapsed time for display
         min, sec = divmod(round(elapsed),60)
         print("\r"+f"Task failed! Time elapsed: {min:0>2d}:{sec:0>2d}") if remaining==0 else print("\r"+f"Task successful! Time elapsed: {min:0>2d}:{sec:0>2d}")
+        # NASA-TLX
+        nasa_tlx = []
+        nasa_dims = ["Mental demand","Pysical demand","Temporal demand","Performance","Effort","Frustration"]
+        for y in nasa_dims:
+            try:
+                nasa_tlx.append(int(input(f"{y}: ")))
+            except:
+                # prevent program exit if empty score entered
+                nasa_tlx.append(0)
         # write result to database
         try:
             db.execute("INSERT INTO Tasks (task_no,participant_id,success,time_elapsed) VALUES (?,?,?,?)",[x,identifier,success,elapsed])
+            db.execute("INSERT INTO LoadNasa (task_no,participant_id,mental_demand,physical_demand,temporal_demand,performance,effort,frustration) VALUES (?,?,?,?,?,?,?,?)",
+                        [x,identifier,nasa_tlx[0],nasa_tlx[1],nasa_tlx[2],nasa_tlx[3],nasa_tlx[4],nasa_tlx[5]])
         except:
             print("\n"+"SQL error: record data on paper!")
+    
     # commit changes if not in test mode
     if args.test==0:
         db.commit()
