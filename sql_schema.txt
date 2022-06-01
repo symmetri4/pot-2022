@@ -65,7 +65,7 @@ CREATE TABLE Stroop (
 /* Filled in post-hoc from UoH data */
 CREATE TABLE Wais (
     id INTEGER PRIMARY KEY,
-    identifier INTEGER,
+    participant_id INTEGER REFERENCES Participants,
     vci INTEGER,
     poi INTEGER,
     wmi INTEGER,

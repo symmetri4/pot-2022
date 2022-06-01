@@ -95,22 +95,22 @@ def trial_tasks(db, identifier: int):
         success = False
         elapsed = remaining
         # task in progress
-        while True:
+        while remaining>0:
             try:
                 min, sec = divmod(remaining,60)
                 print(f"Time remaining: {min:0>2d}:{sec:0>2d}", end="\r")
-                remaining -= 1
                 time.sleep(1)
+                remaining -= 1
             # CTRL+C to interrupt task (=> task success)
             except KeyboardInterrupt:
                 success = True
                 end = time.time()
                 # elapsed time rounded to nearest millisecond
                 elapsed = round(end-begin,3)
-                # rounded elapsed time for display
-                min, sec = divmod(round(elapsed),60)
-                print("\r"+f"Task successful! Time elapsed: {min:0>2d}:{sec:0>2d}")
-                break 
+                break
+        # rounded elapsed time for display
+        min, sec = divmod(round(elapsed),60)
+        print("\r"+f"Task failed! Time elapsed: {min:0>2d}:{sec:0>2d}") if remaining==0 else print("\r"+f"Task successful! Time elapsed: {min:0>2d}:{sec:0>2d}")
         # write result to database
         try:
             db.execute("INSERT INTO Tasks (task_no,participant_id,success,time_elapsed) VALUES (?,?,?,?)",[x,identifier,success,elapsed])
