@@ -2,8 +2,7 @@
 
 CREATE TABLE Participants (
     identifier INTEGER PRIMARY KEY,
-    last_name TEXT,
-    first_name TEXT
+    trial_no INTEGER /* sanity check */
 );
 
 CREATE TABLE Tasks (
@@ -65,7 +64,7 @@ CREATE TABLE Stroop (
 /* Filled in post-hoc from UoH data */
 CREATE TABLE Wais (
     id INTEGER PRIMARY KEY,
-    participant_id INTEGER REFERENCES Participants,
+    identifier INTEGER,
     vci INTEGER,
     poi INTEGER,
     wmi INTEGER,

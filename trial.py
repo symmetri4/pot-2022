@@ -25,12 +25,9 @@ def init():
    
     # participant details
     identifier = int(input("Participant identifier: "))
-    name = input("Participant name: ").split(" ")
-    last_name = name[1]
-    first_name = name[0]
     # write to database
     try:
-        db.execute("INSERT INTO Participants (identifier,last_name,first_name) VALUES (?,?,?)",[identifier,last_name,first_name])
+        db.execute("INSERT INTO Participants (identifier,trial_no) VALUES (?,(SELECT IFNULL(MAX(trial_no),0)+1 FROM Participants))",[identifier])
     except:
         print("\n"+"SQL error: record data on paper!")
 
