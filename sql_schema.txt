@@ -1,8 +1,15 @@
 --- SQL schema ---
 
+CREATE TABLE if not exists Trials (
+    trial_no INTEGER PRIMARY KEY,
+    participant_id INTEGER REFERENCES Participants
+);
+
 CREATE TABLE if not exists Participants (
     identifier INTEGER PRIMARY KEY,
-    trial_no INTEGER /* sanity check */
+    age INTEGER,
+    experience TEXT,
+    primary_os TEXT
 );
 
 CREATE TABLE if not exists Tasks (
@@ -63,8 +70,7 @@ CREATE TABLE if not exists Stroop (
 
 /* Filled in post-hoc from UoH data */
 CREATE TABLE if not exists Wais (
-    id INTEGER PRIMARY KEY,
-    identifier INTEGER,
+    identifier INTEGER PRIMARY KEY,
     vci INTEGER,
     poi INTEGER,
     wmi INTEGER,

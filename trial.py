@@ -28,9 +28,17 @@ def init():
    
     # participant details
     identifier = int(input("Participant identifier: "))
+    # covariates (take integer inputs to avoid mislabelling)
+    age = int(input("Age: "))
+    exp = int(input("Experience (1 Novice, 2 Casual, 3 Expert): "))  # computer experience
+    pri_os = int(input("Primary OS (1 Linux, 2 Windows, 3 Macos, 4 Other): "))  # primary os used
+    # map covariate values: input -> database label
+    exp_map = {1: "novice", 2: "casual", 3: "expert"}
+    os_map = {1: "linux", 2: "windows", 3: "macos", 4: "other"}
     # write to database
     try:
-        db.execute("INSERT INTO Participants (identifier,trial_no) VALUES (?,(SELECT IFNULL(MAX(trial_no),0)+1 FROM Participants))",[identifier])
+        db.execute("INSERT INTO Trials (participant_id) VALUES (?)",[identifier])
+        db.execute("INSERT INTO Participants (identifier,age,experience,primary_os) VALUES (?,?,?,?)",[identifier,age,exp_map[exp],os_map[pri_os]])
     except:
         print("\n"+"SQL error: record data on paper!")
 
@@ -123,8 +131,7 @@ def trial_tasks(db, identifier: int):
         # write result to database
         try:
             db.execute("INSERT INTO Tasks (task_no,participant_id,success,time_elapsed) VALUES (?,?,?,?)",[x,identifier,success,elapsed])
-            db.execute("INSERT INTO LoadNasa (task_no,participant_id,mental_demand,physical_demand,temporal_demand,performance,effort,frustration) VALUES (?,?,?,?,?,?,?,?)",
-                        [x,identifier,nasa_tlx[0],nasa_tlx[1],nasa_tlx[2],nasa_tlx[3],nasa_tlx[4],nasa_tlx[5]])
+            db.execute("INSERT INTO LoadNasa (task_no,participant_id,mental_demand,physical_demand,temporal_demand,performance,effort,frustration) VALUES (?,?,?,?,?,?,?,?)",[x,identifier,nasa_tlx[0],nasa_tlx[1],nasa_tlx[2],nasa_tlx[3],nasa_tlx[4],nasa_tlx[5]])
         except:
             print("\n"+"SQL error: record data on paper!")
     
