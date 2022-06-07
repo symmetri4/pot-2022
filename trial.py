@@ -1,4 +1,4 @@
-import argparse, random, sqlite3, time
+import argparse, random, sqlite3, subprocess, time
 
 # optional arguments
 parser = argparse.ArgumentParser(description=None)
@@ -44,6 +44,7 @@ def init():
 
     # initiate trial part 1: tasks
     print("\n"+"--- Part 1: Computerised Tasks ---"+"\n")
+    practice_task()  # practice task
     trial_tasks(db,identifier)
 
     # initiate trial part 2: pot tests
@@ -54,24 +55,7 @@ def init():
     db.close()
 
 
-"""PART 1: COMPUTERISED TASKS"""
-
-# map of computerised tasks
-task_map = {
-    1: "task1 name",
-    2: "task2 name",
-    3: "task3 name",
-    4: "task4 name",
-    5: "task5 name",
-    6: "task6 name",
-    7: "task7 name",
-    8: "task8 name",
-    9: "task9 name",
-    10: "task10 name",
-    11: "task11 name",
-    12: "task12 name"
-}
-
+"""Helper functions"""
 
 # recursive function for randomising tasks
 # input nested list [[task_list],[]]
@@ -85,20 +69,85 @@ def randomise(tasks: list):
     return tasks[1] if len(tasks[0])==0 else randomise(tasks)
 
 
+# change powerpoint slide
+# TO DO: create custom presentation from randomised task list and run slide show
+def change_slide(slide_no: int):
+    subprocess.Popen(['osascript', '-e', f'''
+        tell application "Microsoft PowerPoint"
+          tell active presentation
+            select slide {slide_no}
+          end tell
+        end tell'''])
+
+
+# start timer (participant display)
+# TO DO: Python timer - current solution looks awful
+# mode 1 enter starts/cancels timer, anything else esc for resetting if timer depleted
+def screen_timer(mode: int):
+    key = 36 if mode==1 else 53
+    subprocess.Popen(['osascript', '-e', f'''
+        tell application "AS Timer"
+          activate
+          tell application "System Events" to key code {key}
+        end tell
+        activate application "Terminal"'''])
+
+
+# practice task
+# TO DO: integrate this into trial_tasks -function, this is just quick fix for pilot
+def practice_task():
+    input("ENTER to begin practice task")
+    print()
+    change_slide(2)
+    begin = time.time()
+    screen_timer(1)
+    try:
+        time.sleep(180)
+        time.sleep(3)
+        screen_timer(0)
+        time.sleep(1)
+        screen_timer(1)
+    except KeyboardInterrupt:
+        screen_timer(1)
+    change_slide(3)
+
+
+"""PART 1: COMPUTERISED TASKS"""
+
+# map of computerised tasks
+task_map = {
+    1: "Verkkopankkitehtävä",
+    2: "Verkkolomaketehtävä",
+    3: "Tiedostonjakotehtävä",
+    4: "Laskun syöttö",
+    5: "Ohjelmiston asennus",
+    6: "Tekstinkäsittelytehtävä",
+    7: "Taulukkolaskentatehtävä",
+    8: "Myynti-ilmoitus",
+    9: "Vakuutustehtävä",
+    10: "Tiedonhakutehtävä",
+    11: "CAPTCHA -tehtävä",
+    12: "Sähköpostitehtävä"
+}
+
+
 # independent TASKS trial for each participant
 def trial_tasks(db, identifier: int):
     # randomise tasks
     task_order = randomise([[x for x in task_map],[]])
-    print("Randomised order:"+"\n")
+    print("\r"+"Randomised order:"+"\n")
     for i, x in enumerate(task_order):
         print(i+1, f": {task_map[x]}")
-
-    # loop through each task
+    
+    # loop through each task (including practice task)
     for i, x in enumerate(task_order):
         input("\n"+f"ENTER to begin task {i+1} : {task_map[x]}")
-        begin = time.time()
+        # display instructions + start timer
+        change_slide(x+3)   # slide 1 welcome, slide 2 practice task, slide 3 nasa-tlx, slides 4-15 tasks
+        screen_timer(1)
         # count down from three minutes
-        remaining = 3*60
+        begin = time.time()
+        remaining = 180
         # default values below stored to database if task fail
         success = False
         elapsed = remaining
@@ -118,8 +167,20 @@ def trial_tasks(db, identifier: int):
                 break
         # rounded elapsed time for display
         min, sec = divmod(round(elapsed),60)
-        print("\r"+f"Task failed! Time elapsed: {min:0>2d}:{sec:0>2d}") if remaining==0 else print("\r"+f"Task successful! Time elapsed: {min:0>2d}:{sec:0>2d}")
+        if remaining==0:
+            print("\r"+f"Task failed! Time elapsed: {min:0>2d}:{sec:0>2d}")
+            # reset timer if depleted (wait due to latency in app)
+            time.sleep(3)
+            screen_timer(0)
+            time.sleep(1)
+            screen_timer(1)
+        else:
+            print("\r"+f"Task successful! Time elapsed: {min:0>2d}:{sec:0>2d}")
+            # cancel timer if success
+            screen_timer(1)
+        # print("\r"+f"Task failed! Time elapsed: {min:0>2d}:{sec:0>2d}") if remaining==0 else print("\r"+f"Task successful! Time elapsed: {min:0>2d}:{sec:0>2d}")
         # NASA-TLX
+        change_slide(3)  # nasa-tlx
         nasa_tlx = []
         nasa_dims = ["Mental demand","Pysical demand","Temporal demand","Performance","Effort","Frustration"]
         for y in nasa_dims:
@@ -135,6 +196,8 @@ def trial_tasks(db, identifier: int):
         except:
             print("\n"+"SQL error: record data on paper!")
     
+    # complete
+    change_slide(16)
     # commit changes if not in test mode
     if args.test==0:
         db.commit()
