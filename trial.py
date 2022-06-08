@@ -26,26 +26,24 @@ def init():
 
     print("\n"+"--- NEW TRIAL COMMENCED ---"+"\n")
    
-    # participant details
-    identifier = int(input("Participant identifier: "))
-    # covariates (take integer inputs to avoid mislabelling)
-    age = int(input("Age: "))
-    exp = int(input("Experience (1 Novice, 2 Casual, 3 Expert): "))  # computer experience
-    pri_os = int(input("Primary OS (1 Linux, 2 Windows, 3 Macos, 4 Other): "))  # primary os used
-    # map covariate values: input -> database label
-    exp_map = {1: "novice", 2: "casual", 3: "expert"}
-    os_map = {1: "linux", 2: "windows", 3: "macos", 4: "other"}
-    # write to database
+    # allocate id
+    identifier = randomise_id(db)
+    print(f"Randomised ID (take note!): {identifier}")
+    # write trial to database
     try:
         db.execute("INSERT INTO Trials (participant_id) VALUES (?)",[identifier])
-        db.execute("INSERT INTO Participants (identifier,age,experience,primary_os) VALUES (?,?,?,?)",[identifier,age,exp_map[exp],os_map[pri_os]])
     except:
         print("\n"+"SQL error: record data on paper!")
+    # commit to database
+    commit(db)
 
     # initiate trial part 1: tasks
     print("\n"+"--- Part 1: Computerised Tasks ---"+"\n")
-    # practice_task()  # practice task
     trial_tasks(db,identifier)
+
+    # covariate questionnaire
+    print("\n"+"--- Covariate questionnaire ---"+"\n")
+    questionnaire(db,identifier)
 
     # initiate trial part 2: pot tests
     print("\n"+"--- Part 2: POT Tests ---"+"\n")
@@ -57,16 +55,27 @@ def init():
 
 """Helper functions"""
 
+# allocate participant random id X
+# read existing ids from SQL database
+# sample X from discrete uniform distribution where X in {1,2,...,100}-{[list of existing ids]}
+def randomise_id(db):
+    # get ids
+    fetch_ids = db.execute("SELECT identifier FROM Participants").fetchall()
+    ids = [x[0] for x in fetch_ids]
+    # return random id excluding existing ids
+    return random.choice(list(set([x for x in range(1,101)])-set(ids)))
+
+
 # recursive function for randomising tasks
 # input nested list [[task_list],[]]
 # output [randomised_tasks]
-def randomise(tasks: list):
+def randomise_tasks(tasks: list):
     # sample from uniform distribution
     index = random.randint(0,len(tasks[0])-1)
     # move a task from tasks[0] to tasks[1] using random index
     tasks[1].append(tasks[0].pop(index))
     # call function unless tasks[0] empty
-    return tasks[1] if len(tasks[0])==0 else randomise(tasks)
+    return tasks[1] if len(tasks[0])==0 else randomise_tasks(tasks)
 
 
 # change powerpoint slide
@@ -78,6 +87,17 @@ def change_slide(slide_no: int):
             select slide {slide_no}
           end tell
         end tell'''])
+
+
+# commit changes to database
+# or rollback if in test mode
+def commit(db):
+    if args.test==0:
+        db.commit()
+        print("\n"+f"Data committed to {args.database}.")
+    else:
+        db.rollback()
+        print("\n"+"Data not committed (in test mode).")
 
 
 """PART 1: COMPUTERISED TASKS"""
@@ -100,27 +120,29 @@ task_map = {
 }
 
 
-# independent TASKS trial for each participant
+# TASKS trial
 def trial_tasks(db, identifier: int):
-    # display NASA-TLX
+    # display NASA-TLX for training
     change_slide(2)
+
     # randomise tasks
-    task_order = randomise([[x for x in task_map][1:13],[]])  # randomise all but practice task
+    task_order = randomise_tasks([[x for x in task_map][1:13],[]])  # randomise all but practice task
     print("\r"+"Randomised order:"+"\n")
     for i, x in enumerate(task_order):
         print(i+1, f": {task_map[x]}")
-    # insert practice task to beginning of randomised list
+    # insert practice task to beginning
     task_order.insert(0,0)
-    # loop through each task (including practice task)
+
+    # loop through each task
     for i, x in enumerate(task_order):
         input("\n"+f"ENTER to begin task {i} : {task_map[x]}")
-        # display task instructions + start timer
+        # display task instructions + start timer on enter
         change_slide(x+3)   # slide 1 welcome, slide 2 nasa-tlx, slide 3 practice task, slides 4-15 tasks
         # count down from three minutes
         begin = time.time()
+        remaining = 180
         timer = subprocess.Popen("exec python timer.py", shell=True)  # on-screen timer
         subprocess.Popen(["osascript", "-e", 'activate application "Terminal"'])  # reactivate main program window
-        remaining = 180
         # default values below stored to database if task fail
         success = False
         elapsed = remaining
@@ -137,15 +159,17 @@ def trial_tasks(db, identifier: int):
                 # query whether task success/fail
                 try:
                     success = int(input("\r"+"Task success (1 success 0 fail): "))
+                # prevent program exit if empty score entered
                 except:
-                    # prevent program exit if empty score entered.
+                    # default to success and warn about missing data
                     success = 1
                     print("Nothing entered. Defaulting to success. Take note if task result fail.")
                 success = True if success==1 else False
                 # elapsed time rounded to nearest millisecond
                 elapsed = round(end-begin,3)
                 break
-        timer.kill()  # kill on-screen timer
+        # kill on-screen timer
+        timer.kill()
         # rounded elapsed time for display
         min, sec = divmod(round(elapsed),60)
         print("\r"+f"Task failed! Time elapsed: {min:0>2d}:{sec:0>2d}") if success is False else print("\r"+f"Task successful! Time elapsed: {min:0>2d}:{sec:0>2d}")
@@ -156,8 +180,9 @@ def trial_tasks(db, identifier: int):
         for y in nasa_dims:
             try:
                 nasa_tlx.append(int(input(f"{y}: ")))
+            # prevent program exit if empty score entered
             except:
-                # prevent program exit if empty score entered
+                # missing data sent to database as 0
                 nasa_tlx.append(0)
         # write result to database (exclude practice task)
         if i!=0:
@@ -166,16 +191,35 @@ def trial_tasks(db, identifier: int):
                 db.execute("INSERT INTO LoadNasa (task_no,participant_id,mental_demand,physical_demand,temporal_demand,performance,effort,frustration) VALUES (?,?,?,?,?,?,?,?)",[x,identifier,nasa_tlx[0],nasa_tlx[1],nasa_tlx[2],nasa_tlx[3],nasa_tlx[4],nasa_tlx[5]])
             except:
                 print("\n"+"SQL error: record data on paper!")
-
+    
     # complete
     change_slide(16)
     # commit changes if not in test mode
-    if args.test==0:
-        db.commit()
-        print("\n"+f"Part 1 complete! Data committed to {args.database}.")
-    else:
-        db.rollback()
-        print("\n"+"Part 1 complete! Data not committed (in test mode).")
+    commit(db)
+
+
+"""QUESTIONNAIRE"""
+
+# covariate questionnaire (take integer inputs to avoid mislabelling)
+def questionnaire(db, identifier: int):
+    # TO DO: add some map for covariates and loop through all
+    #        making sure that errors do not cause program to exit
+    age = int(input("Age: "))
+    exp = int(input("Experience (1 Novice, 2 Casual, 3 Expert): "))  # computer experience
+    pri_os = int(input("Primary OS (1 Linux, 2 Windows, 3 Macos, 4 Other): "))  # primary os used
+    # .
+    # .
+    # . task-specific questions, etc.
+    # map covariate values: input -> database label
+    exp_map = {1: "novice", 2: "casual", 3: "expert"}
+    os_map = {1: "linux", 2: "windows", 3: "macos", 4: "other"}
+    # write to database
+    try:
+        db.execute("INSERT INTO Participants (identifier,age,experience,primary_os) VALUES (?,?,?,?)",[identifier,age,exp_map[exp],os_map[pri_os]])
+    except:
+        print("\n"+"SQL error: record data on paper!")
+    # commit changes if not in test mode
+    commit(db)
 
 
 """PART 2: POT TESTS"""
@@ -185,12 +229,7 @@ def trial_tasks(db, identifier: int):
 def trial_pot(db, identifier: int):
     pass
     # commit changes if not in test mode
-    # if args.test==0:
-    #     db.commit()
-    #     print("\n"+f"Part 2 complete! Data committed to {args.database}.")
-    # else:
-    #     db.rollback()
-    #     print("\n"+"Part 2 complete! Data not committed (in test mode).")
+    # commit(db)
 
 
 if __name__ == "__main__":
