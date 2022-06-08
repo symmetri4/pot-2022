@@ -24,12 +24,12 @@ CREATE TABLE if not exists LoadNasa (
     id INTEGER PRIMARY KEY,
     task_no INTEGER,
     participant_id INTEGER REFERENCES Participants,
-    mental_demand INTEGER,
-    physical_demand INTEGER,
-    temporal_demand INTEGER,
-    performance INTEGER,
-    effort INTEGER,
-    frustration INTEGER
+    hk INTEGER,
+    fk INTEGER,
+    ap INTEGER,
+    suo INTEGER,
+    vn INTEGER,
+    tur INTEGER
 );
 
 /* Filled in post-hoc from GazePoint data */

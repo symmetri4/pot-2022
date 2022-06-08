@@ -177,7 +177,7 @@ def trial_tasks(db, identifier: int):
         # NASA-TLX
         change_slide(2)  # nasa-tlx
         nasa_tlx = []
-        nasa_dims = ["Mental demand","Pysical demand","Temporal demand","Performance","Effort","Frustration"]
+        nasa_dims = ["Henkinen kuormitus","Fyysinen kuormitus","Aikapaine","Suoriutuminen","Vaivannäkö","Turhautuminen"]
         for y in nasa_dims:
             try:
                 nasa_tlx.append(int(input(f"{y}: ")))
@@ -189,7 +189,7 @@ def trial_tasks(db, identifier: int):
         if i!=0:
             try:
                 db.execute("INSERT INTO Tasks (task_no,participant_id,success,time_elapsed) VALUES (?,?,?,?)",[x,identifier,success,elapsed])
-                db.execute("INSERT INTO LoadNasa (task_no,participant_id,mental_demand,physical_demand,temporal_demand,performance,effort,frustration) VALUES (?,?,?,?,?,?,?,?)",[x,identifier,nasa_tlx[0],nasa_tlx[1],nasa_tlx[2],nasa_tlx[3],nasa_tlx[4],nasa_tlx[5]])
+                db.execute("INSERT INTO LoadNasa (task_no,participant_id,hk,fk,ap,suo,vn,tur) VALUES (?,?,?,?,?,?,?,?)",[x,identifier,nasa_tlx[0],nasa_tlx[1],nasa_tlx[2],nasa_tlx[3],nasa_tlx[4],nasa_tlx[5]])
             except:
                 print("\n"+"SQL error: record data on paper!")
     
