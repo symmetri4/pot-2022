@@ -156,6 +156,7 @@ def trial_tasks(db, identifier: int):
             # CTRL+C to interrupt task
             except KeyboardInterrupt:
                 end = time.time()
+                timer.kill()  # kill on-screen timer
                 # query whether task success/fail
                 try:
                     success = int(input("\r"+"Task success (1 success 0 fail): "))
@@ -168,7 +169,7 @@ def trial_tasks(db, identifier: int):
                 # elapsed time rounded to nearest millisecond
                 elapsed = round(end-begin,3)
                 break
-        # kill on-screen timer
+        # kill on-screen timer (if still running)
         timer.kill()
         # rounded elapsed time for display
         min, sec = divmod(round(elapsed),60)
