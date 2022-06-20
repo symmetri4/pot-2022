@@ -58,7 +58,7 @@ def init():
 # allocate participant random id X
 # read existing ids from SQL database
 # sample X from discrete uniform distribution where X in {1,2,...,100}-{[list of existing ids]}
-def randomise_id(db):
+def randomise_id(db: sqlite3.Connection):
     # get ids
     fetch_ids = db.execute("SELECT identifier FROM Participants").fetchall()
     ids = [x[0] for x in fetch_ids]
@@ -91,7 +91,7 @@ def change_slide(slide_no: int):
 
 # commit changes to database
 # or rollback if in test mode
-def commit(db):
+def commit(db: sqlite3.Connection):
     if args.test==0:
         db.commit()
         print("\n"+f"Data committed to {args.database}.")
@@ -115,18 +115,24 @@ task_map = {
     8: "Myynti-ilmoitus",
     9: "Vakuutustehtävä",
     10: "Tiedonhakutehtävä",
-    11: "CAPTCHA -tehtävä",
-    12: "Sähköpostitehtävä"
+    11: "Kela -tehtävä",
+    12: "Navigointitehtävä",
+    13: "Sähköpostitehtävä",
+    14: "Veroilmoitustehtävä",
+    15: "Komentorivitehtävä",
+    16: "CAPTCHA -tehtävä",
+    17: "Videopuhelutehtävä",
+    18: ""
 }
 
 
 # TASKS trial
-def trial_tasks(db, identifier: int):
-    # display NASA-TLX for training
+def trial_tasks(db: sqlite3.Connection, identifier: int):
+    # NASA-TLX intro
     change_slide(2)
 
     # randomise tasks
-    task_order = randomise_tasks([[x for x in task_map][1:13],[]])  # randomise all but practice task
+    task_order = randomise_tasks([[x for x in task_map][1:],[]])  # all but practice task
     print("\r"+"Randomised order:"+"\n")
     for i, x in enumerate(task_order):
         print(i+1, f": {task_map[x]}")
@@ -137,7 +143,7 @@ def trial_tasks(db, identifier: int):
     for i, x in enumerate(task_order):
         input("\n"+f"ENTER to begin task {i} : {task_map[x]}")
         # display task instructions + start timer on enter
-        change_slide(x+3)   # slide 1 welcome, slide 2 nasa-tlx, slide 3 practice task, slides 4-15 tasks
+        change_slide(x+3)   # slide 1 welcome, slide 2 nasa-tlx, slide 3 practice task, slides 4-21 tasks
         # count down from three minutes
         begin = time.time()
         remaining = 180
@@ -176,8 +182,20 @@ def trial_tasks(db, identifier: int):
         print("\r"+f"Task failed! Time elapsed: {min:0>2d}:{sec:0>2d}") if success is False else print("\r"+f"Task successful! Time elapsed: {min:0>2d}:{sec:0>2d}")
         # NASA-TLX
         change_slide(2)  # nasa-tlx
+        input("NASA-TLX reminder (enter to proceed)")
+        # write task results to database (exclude practice task)
+        if i!=0:
+            try:
+                db.execute("INSERT INTO Tasks (task_no,participant_id,success,time_elapsed) VALUES (?,?,?,?)",[x,identifier,success,elapsed])
+            except:
+                print("\n"+"SQL error: record data on paper!")
+    # complete
+    change_slide(16)
+    # digitise NASA-TLX scores after completing all tasks
+    for i, x in enumerate(task_order[1:]):
         nasa_tlx = []
-        nasa_dims = ["Henkinen kuormitus","Fyysinen kuormitus","Aikapaine","Suoriutuminen","Vaivannäkö","Turhautuminen"]
+        nasa_dims = ["Henkinen vaativuus","Fyysinen vaativuus","Ajallinen vaativuus","Oma suoriutuminen","Vaivannäkö","Turhautuneisuus"]
+        print("\n"+f"Task {i+1}")
         for y in nasa_dims:
             try:
                 nasa_tlx.append(int(input(f"{y}: ")))
@@ -185,16 +203,10 @@ def trial_tasks(db, identifier: int):
             except:
                 # missing data sent to database as 0
                 nasa_tlx.append(0)
-        # write result to database (exclude practice task)
-        if i!=0:
-            try:
-                db.execute("INSERT INTO Tasks (task_no,participant_id,success,time_elapsed) VALUES (?,?,?,?)",[x,identifier,success,elapsed])
-                db.execute("INSERT INTO LoadNasa (task_no,participant_id,hk,fk,ap,suo,vn,tur) VALUES (?,?,?,?,?,?,?,?)",[x,identifier,nasa_tlx[0],nasa_tlx[1],nasa_tlx[2],nasa_tlx[3],nasa_tlx[4],nasa_tlx[5]])
-            except:
-                print("\n"+"SQL error: record data on paper!")
-    
-    # complete
-    change_slide(16)
+        try:
+            db.execute("INSERT INTO LoadNasa (task_no,participant_id,hv,fv,av,os,vn,tur) VALUES (?,?,?,?,?,?,?,?)",[x,identifier,nasa_tlx[0],nasa_tlx[1],nasa_tlx[2],nasa_tlx[3],nasa_tlx[4],nasa_tlx[5]])
+        except:
+            print("\n"+"SQL error: record data on paper!")
     # commit changes if not in test mode
     commit(db)
 
@@ -202,23 +214,34 @@ def trial_tasks(db, identifier: int):
 """QUESTIONNAIRE"""
 
 # covariate questionnaire (take integer inputs to avoid mislabelling)
-def questionnaire(db, identifier: int):
-    # TO DO: add some map for covariates and loop through all
-    #        making sure that errors do not cause program to exit
-    age = int(input("Age: "))
-    exp = int(input("Experience (1 Novice, 2 Casual, 3 Expert): "))  # computer experience
-    pri_os = int(input("Primary OS (1 Linux, 2 Windows, 3 Macos, 4 Other): "))  # primary os used
-    # .
-    # .
-    # . task-specific questions, etc.
-    # map covariate values: input -> database label
-    exp_map = {1: "novice", 2: "casual", 3: "expert"}
-    os_map = {1: "linux", 2: "windows", 3: "macos", 4: "other"}
+def questionnaire(db: sqlite3.Connection, identifier: int):
+    # list for digitising questionnaire answers
+    qs = []
+    for i in range(23):  # number of questions
+        try:
+            qs.append(int(input(f"Q{i+1}: ")))
+        # prevent program exit if empty score entered
+        except:
+            # missing data sent to database as 0
+            qs.append(0)
+            print("Nothing entered; writing 0. Take note.")
+    # map covariate values where text labels: input -> database label
+    gender_map = {1: "mies", 2: "nainen", 3: "muu"}
+    exp_map = {1: "aloittelija", 2: "arkikäyttäjä", 3: "asiantuntija"}
+    os_map = {1: "linux", 2: "macos", 3: "windows", 4: "muu"}
+    browser_map = {1: "chrome", 2: "microsoft", 3: "firefox", 4: "safari", 5: "muu"}
     # write to database
+    # general questions
     try:
-        db.execute("INSERT INTO Participants (identifier,age,experience,primary_os) VALUES (?,?,?,?)",[identifier,age,exp_map[exp],os_map[pri_os]])
+        db.execute("INSERT INTO Participants (identifier,age,gender,exp,os,browser) VALUES (?,?,?,?,?,?)",[identifier,qs[0],gender_map[qs[1]],exp_map[qs[2]],os_map[qs[3]],browser_map[qs[4]]])
     except:
         print("\n"+"SQL error: record data on paper!")
+    # task-specific questions
+    for i, x in enumerate(qs[5:]):
+        try:
+            db.execute(f"UPDATE Participants SET t{i+1}=? WHERE identifier=?",[x,identifier])
+        except:
+            print("\n"+f"SQL error for t{i+1}: record data on paper!")
     # commit changes if not in test mode
     commit(db)
 
@@ -227,7 +250,7 @@ def questionnaire(db, identifier: int):
 
 # independent POT trial for each participant
 # TO DO
-def trial_pot(db, identifier: int):
+def trial_pot(db: sqlite3.Connection, identifier: int):
     pass
     # commit changes if not in test mode
     # commit(db)

@@ -8,8 +8,28 @@ CREATE TABLE if not exists Trials (
 CREATE TABLE if not exists Participants (
     identifier INTEGER PRIMARY KEY,
     age INTEGER,
-    experience TEXT,
-    primary_os TEXT
+    gender TEXT,
+    exp TEXT,
+    os TEXT,
+    browser TEXT,
+    t1 INTEGER,
+    t2 INTEGER,
+    t3 INTEGER,
+    t4 INTEGER,
+    t5 INTEGER,
+    t6 INTEGER,
+    t7 INTEGER,
+    t8 INTEGER,
+    t9 INTEGER,
+    t10 INTEGER,
+    t11 INTEGER,
+    t12 INTEGER,
+    t13 INTEGER,
+    t14 INTEGER,
+    t15 INTEGER,
+    t16 INTEGER,
+    t17 INTEGER,
+    t18 INTEGER
 );
 
 CREATE TABLE if not exists Tasks (
@@ -24,10 +44,10 @@ CREATE TABLE if not exists LoadNasa (
     id INTEGER PRIMARY KEY,
     task_no INTEGER,
     participant_id INTEGER REFERENCES Participants,
-    hk INTEGER,
-    fk INTEGER,
-    ap INTEGER,
-    suo INTEGER,
+    hv INTEGER,
+    fv INTEGER,
+    av INTEGER,
+    os INTEGER,
     vn INTEGER,
     tur INTEGER
 );
