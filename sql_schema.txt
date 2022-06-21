@@ -36,6 +36,7 @@ CREATE TABLE if not exists Tasks (
     id INTEGER PRIMARY KEY,
     participant_id INTEGER REFERENCES Participants,
     task_no INTEGER,
+    begin TIMESTAMP,
     success BOOLEAN,
     time_elapsed FLOAT
 );

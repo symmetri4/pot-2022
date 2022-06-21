@@ -1,4 +1,4 @@
-import argparse, random, sqlite3, subprocess, time
+import argparse, datetime, random, sqlite3, subprocess, time
 
 # optional arguments
 parser = argparse.ArgumentParser(description=None)
@@ -146,6 +146,7 @@ def trial_tasks(db: sqlite3.Connection, identifier: int):
         change_slide(x+3)   # slide 1 welcome, slide 2 nasa-tlx, slide 3 practice task, slides 4-21 tasks
         # count down from three minutes
         begin = time.time()
+        timestamp = datetime.datetime.now()
         remaining = 180
         timer = subprocess.Popen("exec python timer.py", shell=True)  # on-screen timer
         subprocess.Popen(["osascript", "-e", 'activate application "Terminal"'])  # reactivate main program window
@@ -186,11 +187,11 @@ def trial_tasks(db: sqlite3.Connection, identifier: int):
         # write task results to database (exclude practice task)
         if i!=0:
             try:
-                db.execute("INSERT INTO Tasks (task_no,participant_id,success,time_elapsed) VALUES (?,?,?,?)",[x,identifier,success,elapsed])
+                db.execute("INSERT INTO Tasks (task_no,participant_id,begin,success,time_elapsed) VALUES (?,?,?,?,?)",[x,identifier,timestamp,success,elapsed])
             except:
                 print("\n"+"SQL error: record data on paper!")
     # complete
-    change_slide(16)
+    change_slide(22)
     # digitise NASA-TLX scores after completing all tasks
     for i, x in enumerate(task_order[1:]):
         nasa_tlx = []
@@ -226,10 +227,10 @@ def questionnaire(db: sqlite3.Connection, identifier: int):
             qs.append(0)
             print("Nothing entered; writing 0. Take note.")
     # map covariate values where text labels: input -> database label
-    gender_map = {1: "mies", 2: "nainen", 3: "muu"}
-    exp_map = {1: "aloittelija", 2: "arkikäyttäjä", 3: "asiantuntija"}
-    os_map = {1: "linux", 2: "macos", 3: "windows", 4: "muu"}
-    browser_map = {1: "chrome", 2: "microsoft", 3: "firefox", 4: "safari", 5: "muu"}
+    gender_map = {0: "NA", 1: "mies", 2: "nainen", 3: "muu"}
+    exp_map = {0: "NA", 1: "aloittelija", 2: "arkikäyttäjä", 3: "asiantuntija"}
+    os_map = {0: "NA", 1: "linux", 2: "macos", 3: "windows", 4: "muu"}
+    browser_map = {0: "NA", 1: "chrome", 2: "microsoft", 3: "firefox", 4: "safari", 5: "muu"}
     # write to database
     # general questions
     try:
