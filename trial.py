@@ -106,7 +106,7 @@ def commit(db: sqlite3.Connection):
 task_map = {
     0: "Harjoitustehtävä",
     1: "Verkkopankkitehtävä",
-    2: "Verkkolomaketehtävä",
+    2: "Verkkokyselytehtävä",
     3: "Tiedostonjakotehtävä",
     4: "Laskun syöttö",
     5: "Ohjelmiston asennus",
@@ -118,7 +118,7 @@ task_map = {
     11: "Kela -tehtävä",
     12: "Navigointitehtävä",
     13: "Sähköpostitehtävä",
-    14: "Veroilmoitustehtävä",
+    14: "Lomakkeenhakutehtävä",
     15: "Komentorivitehtävä",
     16: "CAPTCHA -tehtävä",
     17: "Videopuhelutehtävä",
@@ -148,8 +148,8 @@ def trial_tasks(db: sqlite3.Connection, identifier: int):
         begin = time.time()
         timestamp = datetime.datetime.now()
         remaining = 180
-        timer = subprocess.Popen("exec python timer.py", shell=True)  # on-screen timer
-        subprocess.Popen(["osascript", "-e", 'activate application "Terminal"'])  # reactivate main program window
+        # timer = subprocess.Popen("exec python timer.py", shell=True)  # on-screen timer
+        # subprocess.Popen(["osascript", "-e", 'activate application "Terminal"'])  # reactivate main program window
         # default values below stored to database if task fail
         success = False
         elapsed = remaining
@@ -163,7 +163,7 @@ def trial_tasks(db: sqlite3.Connection, identifier: int):
             # CTRL+C to interrupt task
             except KeyboardInterrupt:
                 end = time.time()
-                timer.kill()  # kill on-screen timer
+                # timer.kill()  # kill on-screen timer
                 # query whether task success/fail
                 try:
                     success = int(input("\r"+"Task success (1 success 0 fail): "))
@@ -177,7 +177,7 @@ def trial_tasks(db: sqlite3.Connection, identifier: int):
                 elapsed = round(end-begin,3)
                 break
         # kill on-screen timer (if still running)
-        timer.kill()
+        # timer.kill()
         # rounded elapsed time for display
         min, sec = divmod(round(elapsed),60)
         print("\r"+f"Task failed! Time elapsed: {min:0>2d}:{sec:0>2d}") if success is False else print("\r"+f"Task successful! Time elapsed: {min:0>2d}:{sec:0>2d}")
@@ -218,7 +218,7 @@ def trial_tasks(db: sqlite3.Connection, identifier: int):
 def questionnaire(db: sqlite3.Connection, identifier: int):
     # list for digitising questionnaire answers
     qs = []
-    for i in range(23):  # number of questions
+    for i in range(27):  # number of questions
         try:
             qs.append(int(input(f"Q{i+1}: ")))
         # prevent program exit if empty score entered
@@ -228,17 +228,19 @@ def questionnaire(db: sqlite3.Connection, identifier: int):
             print("Nothing entered; writing 0. Take note.")
     # map covariate values where text labels: input -> database label
     gender_map = {0: "NA", 1: "mies", 2: "nainen", 3: "muu"}
+    ed_map = {0: "NA", 1: "perusaste", 2: "keskiaste", 3: "alempi", 4: "ylempi"}
+    eng_map = {0: "NA", 1: "alkeet", 2: "sujuva", 3: "äidinkieli"}
     exp_map = {0: "NA", 1: "aloittelija", 2: "arkikäyttäjä", 3: "asiantuntija"}
     os_map = {0: "NA", 1: "linux", 2: "macos", 3: "windows", 4: "muu"}
     browser_map = {0: "NA", 1: "chrome", 2: "microsoft", 3: "firefox", 4: "safari", 5: "muu"}
     # write to database
     # general questions
     try:
-        db.execute("INSERT INTO Participants (identifier,age,gender,exp,os,browser) VALUES (?,?,?,?,?,?)",[identifier,qs[0],gender_map[qs[1]],exp_map[qs[2]],os_map[qs[3]],browser_map[qs[4]]])
+        db.execute("INSERT INTO Participants (identifier,age,hrs_pc,hrs_mob,gender,ed,eng,exp,os,browser) VALUES (?,?,?,?,?,?,?,?,?,?)",[identifier,qs[0],qs[1],qs[2],gender_map[qs[3]],ed_map[qs[4]],eng_map[qs[5]],exp_map[qs[6]],os_map[qs[7]],browser_map[qs[8]]])
     except:
         print("\n"+"SQL error: record data on paper!")
     # task-specific questions
-    for i, x in enumerate(qs[5:]):
+    for i, x in enumerate(qs[9:]):
         try:
             db.execute(f"UPDATE Participants SET t{i+1}=? WHERE identifier=?",[x,identifier])
         except:

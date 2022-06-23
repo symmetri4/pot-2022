@@ -8,7 +8,11 @@ CREATE TABLE if not exists Trials (
 CREATE TABLE if not exists Participants (
     identifier INTEGER PRIMARY KEY,
     age INTEGER,
+    hrs_pc INTEGER,
+    hrs_mob INTEGER,
     gender TEXT,
+    ed TEXT,
+    eng TEXT,
     exp TEXT,
     os TEXT,
     browser TEXT,
