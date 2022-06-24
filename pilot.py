@@ -223,7 +223,7 @@ def questionnaire(db: sqlite3.Connection, identifier: int):
     # map covariate values where text labels: input -> database label
     gender_map = {0: "NA", 1: "mies", 2: "nainen", 3: "muu"}
     ed_map = {0: "NA", 1: "perusaste", 2: "keskiaste", 3: "alempi", 4: "ylempi"}
-    eng_map = {0: "NA", 1: "alkeet", 2: "sujuva", 3: "äidinkieli"}
+    eng_map = {0: "NA", 1: "alkeet", 2: "hyvä", 3: "sujuva", 4: "äidinkieli"}
     exp_map = {0: "NA", 1: "aloittelija", 2: "arkikäyttäjä", 3: "asiantuntija"}
     os_map = {0: "NA", 1: "linux", 2: "macos", 3: "windows", 4: "muu"}
     browser_map = {0: "NA", 1: "chrome", 2: "microsoft", 3: "firefox", 4: "safari", 5: "muu"}
