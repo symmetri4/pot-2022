@@ -22,7 +22,7 @@ def init():
     db.isolation_level = "DEFERRED"
 
     # create tables from schema if not exist
-    [db.execute(x) for x in open("sql_schema.txt","r").read().split(";")]
+    [db.execute(x) for x in open("../sql_schema.txt","r").read().split(";")]
 
     print("\n"+"--- NEW TRIAL COMMENCED ---"+"\n")
    
