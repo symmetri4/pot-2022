@@ -121,8 +121,7 @@ task_map = {
     14: "Lomakkeenhakutehtävä",
     15: "Komentorivitehtävä",
     16: "CAPTCHA -tehtävä",
-    17: "Videopuhelutehtävä",
-    18: ""
+    17: "Videopuhelutehtävä"
 }
 
 
@@ -212,7 +211,7 @@ def trial_tasks(db: sqlite3.Connection, identifier: int):
 def questionnaire(db: sqlite3.Connection, identifier: int):
     # list for digitising questionnaire answers
     qs = []
-    for i in range(27):  # number of questions
+    for i in range(26):  # number of questions
         try:
             qs.append(int(input(f"Q{i+1}: ")))
         # prevent program exit if empty score entered

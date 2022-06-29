@@ -1,6 +1,7 @@
 ###
 # --- functionality ---
-# graph time elapsed: time()
+# graph time elapsed by task: tet()
+# graph time elapsed by participant: pet()
 # graph nasa-tlx: smw()
 # export SQL tables to CSV: csv()
 ###
@@ -14,11 +15,11 @@ con <- dbConnect(RSQLite::SQLite(), "pilot.db")
 dir.create("pilot_graphs", showWarnings=FALSE)
 dir.create("pilot_csv", showWarnings=FALSE)
 
-# boxplots: elapsed time (inc. task success)
-et <- function() {
-    # fetch task data
+# boxplots: elapsed time (inc. task success) by task
+tet <- function() {
+    # store task success data
     task_success <- c()
-    # vector to store boxplot cols (based on success rate)
+    # store boxplot cols (based on success rate)
     cols <- c()
     for (i in seq(1,17)) {  # useful: sort(unique(tasks$task_no))
         # durs
@@ -36,7 +37,7 @@ et <- function() {
     # task durs -> df
     task_durs <- data.frame(t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15,t16,t17)
     # filename
-    png(file="pilot_graphs/duration.png")
+    pdf(file="pilot_graphs/elapsed_tasks.pdf")
     # generate and save boxplots
     bounds <- boxplot(task_durs, xlab = "Task number", ylab="Time elapsed (s)", col=cols, xaxt="n", yaxt="n", ylim=c(0,180), cex.lab=0.9)
     legend("bottomright", legend = c("[0,10)U(90,100]", "[10,30)U(70,90]", "[30,70]"), cex=0.75, border="black", title = "Success rate (%)", title.adj = 0.5, fill = c("#cc3333", "#ffcc00", "#99cc33")) 
@@ -51,7 +52,47 @@ et <- function() {
     # mtext(side=1, "Observations (n):", at=-2.5, cex=0.6, line=-28, adj=0)
     # mtext(side=1, nrow(task_durs), at=seq(1,17,1), cex=0.6, line=-28)
     dev.off()
-    return(task_success)
+}
+
+# boxplots: elapsed time (inc. task success) by participant
+pet <- function() {
+    # empty data frame for participant data
+    participants <- data.frame(matrix(NA,nrow=17,ncol=0))
+    # store task success data
+    task_success <- c()
+    # fetch participant ids
+    ids <- dbGetQuery(con, "SELECT DISTINCT identifier as x FROM Participants")$x
+    # store boxplot cols (based on success rate)
+    cols <- c()
+    # loop through each participant
+    for (i in ids) {
+        # durs
+        durs <- dbGetQuery(con, paste("SELECT time_elapsed as x FROM Tasks WHERE participant_id=",i,sep=""))$x
+        participants <- cbind(participants, durs)
+        # task success
+        successes <- dbGetQuery(con, paste("SELECT success as x FROM Tasks WHERE participant_id=",i,sep=""))$x
+        # round task success to 2 d.p.
+        task_success <- append(task_success, round(sum(successes)/length(successes)*100, 2))
+        # append appropriate col
+        if (task_success[length(task_success)]<10 || task_success[length(task_success)]>90) cols <- append(cols, "#cc3333") # red if success % in [0,10)U(90,100]
+        else if (task_success[length(task_success)]>=10 & task_success[length(task_success)]<30) cols <- append(cols, "#ffcc00") # yellow if in [10,30)
+        else if (task_success[length(task_success)]>=30 & task_success[length(task_success)]<=70) cols <- append(cols, "#99cc33") # green if in [30,70]
+        else if (task_success[length(task_success)]>70 & task_success[length(task_success)]<=90) cols <- append(cols, "#ffcc00") # yellow if in (70,90]
+    }
+    # rename df cols to participants ids
+    colnames(participants) <- ids
+    # filename
+    pdf(file="pilot_graphs/elapsed_participants.pdf")
+    # generate and save boxplots
+    bounds <- boxplot(participants, xlab = "Participant ID", ylab="Time elapsed (s)", col=cols, xaxt="n", yaxt="n", ylim=c(0,180), cex.lab=0.9)
+    legend("bottomright", legend = c("[0,10)U(90,100]", "[10,30)U(70,90]", "[30,70]"), cex=0.75, border="black", title = "Success rate (%)", title.adj = 0.5, fill = c("#cc3333", "#ffcc00", "#99cc33")) 
+    title(main="Pilot participant success (tasks 1-17)")
+    axis(side=1, lwd=0.3, at=seq(1,length(ids),1), mgp=c(3,1,0), cex.axis=0.75, labels=ids)
+    axis(side=2, lwd=0.3, at=seq(0,180,30), las=2, mgp=c(3,1,0), cex.axis=0.75)
+    abline(h=180, col="#cc3333", lty=2)
+    mtext(side=4, "deadline", col="#cc3333", at=180, adj=0, line=0.1, cex=0.5, las=2)
+    text(x=c(1:length(ids)), y=bounds$stats[1,]-5, paste(task_success,"% success",sep=""), cex=0.5)
+    dev.off()
 }
 
 # boxplots: nasa-tlx for each task
