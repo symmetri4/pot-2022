@@ -47,10 +47,6 @@ tet <- function() {
     abline(h=180, col="#cc3333", lty=2)
     mtext(side=4, "deadline", col="#cc3333", at=180, adj=0, line=0.1, cex=0.5, las=2)
     text(x=c(1:17), y=bounds$stats[1,]-5, paste("n = ",nrow(task_durs),sep=""), cex=0.5)
-    # mtext(side=1, "Success rate (%):", at=-2.5, cex=0.6, line=-29, adj=0)
-    # mtext(side=1, task_success, at=seq(1,17,1), cex=0.6, line=-29)
-    # mtext(side=1, "Observations (n):", at=-2.5, cex=0.6, line=-28, adj=0)
-    # mtext(side=1, nrow(task_durs), at=seq(1,17,1), cex=0.6, line=-28)
     dev.off()
 }
 
@@ -62,6 +58,15 @@ pet <- function() {
     task_success <- c()
     # fetch participant ids
     ids <- dbGetQuery(con, "SELECT DISTINCT identifier as x FROM Participants")$x
+    # fetch participant background data
+    age <- dbGetQuery(con, "SELECT age as x FROM Participants")$x
+    ed <- dbGetQuery(con, "SELECT ed as x FROM Participants")$x
+    exp <- dbGetQuery(con, "SELECT exp as x FROM Participants")$x
+    # replace db abbreviations with full labels
+    ed_map <- c("perusaste"="perusaste", "keskiaste"="keskiaste", "alempi"="alempi kk", "ylempi"="ylempi kk")
+    for (i in seq(1,length(ed))) {
+        ed[i] <- ed_map[ed[i]]
+    }
     # store boxplot cols (based on success rate)
     cols <- c()
     # loop through each participant
@@ -85,13 +90,15 @@ pet <- function() {
     pdf(file="pilot_graphs/elapsed_participants.pdf")
     # generate and save boxplots
     bounds <- boxplot(participants, xlab = "Participant ID", ylab="Time elapsed (s)", col=cols, xaxt="n", yaxt="n", ylim=c(0,180), cex.lab=0.9)
-    legend("bottomright", legend = c("[0,10)U(90,100]", "[10,30)U(70,90]", "[30,70]"), cex=0.75, border="black", title = "Success rate (%)", title.adj = 0.5, fill = c("#cc3333", "#ffcc00", "#99cc33")) 
+    legend("bottomright", legend = c("[0,10)U(90,100]", "[10,30)U(70,90]", "[30,70]"), cex=0.75, border="black", title = "Success rate (%)", title.adj = 0.5, fill = c("#cc3333", "#ffcc00", "#99cc33"))
     title(main="Pilot participant success (tasks 1-17)")
     axis(side=1, lwd=0.3, at=seq(1,length(ids),1), mgp=c(3,1,0), cex.axis=0.75, labels=ids)
     axis(side=2, lwd=0.3, at=seq(0,180,30), las=2, mgp=c(3,1,0), cex.axis=0.75)
     abline(h=180, col="#cc3333", lty=2)
     mtext(side=4, "deadline", col="#cc3333", at=180, adj=0, line=0.1, cex=0.5, las=2)
     text(x=c(1:length(ids)), y=bounds$stats[1,]-5, paste(task_success,"% success",sep=""), cex=0.5)
+    text(x=c(1:length(ids)), y=bounds$stats[1,]-10, paste(exp," (",age,"v)",sep=""), cex=0.5)
+    text(x=c(1:length(ids)), y=bounds$stats[1,]-15, ed, cex=0.5)
     dev.off()
 }
 
