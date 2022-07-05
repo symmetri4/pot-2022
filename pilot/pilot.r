@@ -108,7 +108,7 @@ smw <- function() {
         # fetch data for each task
         nasa_tlx <- dbGetQuery(con, paste("SELECT hv,fv,av,os,vn,tur FROM LoadNasa WHERE task_no=",i,sep=""))
         # filename
-        png(file=paste("pilot_graphs/t",i,"_nasa-tlx.png",sep=""))
+        pdf(file=paste("pilot_graphs/t",i,"_nasa-tlx.pdf",sep=""))
         # generate and save boxplots
         boxplot(nasa_tlx, ylab="Kuormitus", col="#ccccff", xaxt="n", yaxt="n", ylim=c(0,100), cex.lab=0.9)
         title(main=paste("NASA-TLX (task #",i,")",sep=""))
