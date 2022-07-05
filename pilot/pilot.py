@@ -140,9 +140,24 @@ def trial_tasks(db: sqlite3.Connection, identifier: int):
 
     # loop through each task
     for i, x in enumerate(task_order):
+        # 2 min break half-way
+        if i==10:
+            print("\n"+"2 minute break!")
+            os.system('say "tauko"')
+            remaining = 120
+            begin = time.time()
+            change_slide(24)
+            while remaining>0:
+                min, sec = divmod(remaining,60)
+                print(f"Time remaining: {min:0>2d}:{sec:0>2d}", end="\r")  # terminal timer
+                time.sleep(1)
+                remaining -= 1
+            print("Break over. Continue tasks...")
+            os.system('say "tauko ohi"')
+        # enter to begin task
         input("\n"+f"ENTER to begin task {i} : {task_map[x]}")
         # display task instructions + start timer on enter
-        change_slide(x+3)   # slide 1 welcome, slide 2 nasa-tlx, slide 3 practice task, slides 4-21 tasks
+        change_slide(x+3)   # slide 1 welcome, 2 nasa-tlx, 3 practice task, 4-21 tasks, 22-23 questionnaire, 24 break
         # count down from three minutes
         begin = time.time()
         timestamp = datetime.datetime.now()
@@ -215,6 +230,8 @@ def questionnaire(db: sqlite3.Connection, identifier: int):
     # list for digitising questionnaire answers
     qs = []
     for i in range(26):  # number of questions
+        if i==14:
+            change_slide(23)  # second page of questionnaire
         try:
             qs.append(int(input(f"Q{i+1}: ")))
         # prevent program exit if empty score entered
@@ -241,6 +258,8 @@ def questionnaire(db: sqlite3.Connection, identifier: int):
             db.execute(f"UPDATE Participants SET t{i+1}=? WHERE identifier=?",[x,identifier])
         except:
             print("\n"+f"SQL error for t{i+1}: record data on paper!")
+    # complete
+    change_slide(1)
     # commit changes if not in test mode
     commit(db)
 
