@@ -11,12 +11,10 @@ library(DBI)  # reference: https://db.rstudio.com/databases/sqlite/
 # connect to pilot.db
 con <- dbConnect(RSQLite::SQLite(), "pilot.db")
 
-# create dirs if not exist
-dir.create("pilot_graphs", showWarnings=FALSE)
-dir.create("pilot_csv", showWarnings=FALSE)
-
 # boxplots: elapsed time (inc. task success) by task
 tet <- function() {
+    # create dir if not exist
+    dir.create("pilot_graphs", showWarnings=FALSE)
     # store task success data
     task_success <- c()
     # store boxplot cols (based on success rate)
@@ -52,6 +50,8 @@ tet <- function() {
 
 # boxplots: elapsed time (inc. task success) by participant
 pet <- function() {
+    # create dir if not exist
+    dir.create("pilot_graphs", showWarnings=FALSE)
     # empty data frame for participant data
     participants <- data.frame(matrix(NA,nrow=17,ncol=0))
     # store task success data
@@ -104,6 +104,8 @@ pet <- function() {
 
 # boxplots: nasa-tlx for each task
 smw <- function() {
+    # create dir if not exist
+    dir.create("pilot_graphs", showWarnings=FALSE)
     for (i in seq(1,17)) {
         # fetch data for each task
         nasa_tlx <- dbGetQuery(con, paste("SELECT hv,fv,av,os,vn,tur FROM LoadNasa WHERE task_no=",i,sep=""))
@@ -112,6 +114,9 @@ smw <- function() {
         # generate and save boxplots
         boxplot(nasa_tlx, ylab="Kuormitus", col="#ccccff", xaxt="n", yaxt="n", ylim=c(0,100), cex.lab=0.9)
         title(main=paste("NASA-TLX (task #",i,")",sep=""))
+        ### huom! alla
+        mtext(side=1, paste("n = ",nrow(nasa_tlx),sep=""), col="#cc3333", at=0, adj=0, line=0, cex=0.5, las=1)
+        ###
         axis(side=1, lwd=0.3, labels=c("Henkinen\nvaativuus", "Fyysinen\nvaativuus", "Ajallinen\nvaativuus", "Oma\nsuoriutuminen", "Vaivannäkö", "Turhautuneisuus"), at=seq(1,6,1), mgp=c(3,1,0), cex.axis=0.7, las=1, adj=1)
         axis(side=2, lwd=0.3, at=seq(0,100,10), las=2, mgp=c(3,1,0), cex.axis=0.75)
         dev.off()
@@ -120,6 +125,8 @@ smw <- function() {
 
 # SQL tables -> CSV
 csv <- function() {
+    # create dir if not exist
+    dir.create("pilot_csv", showWarnings=FALSE)
     # table names
     tables <- c("tasks", "load", "trials", "participants")
     # fetch tables

@@ -1,4 +1,4 @@
-import argparse, datetime, random, sqlite3, subprocess, time
+import argparse, datetime, os, random, sqlite3, subprocess, time
 
 # optional arguments
 parser = argparse.ArgumentParser(description=None)
@@ -159,6 +159,9 @@ def trial_tasks(db: sqlite3.Connection, identifier: int):
                 print(f"Time remaining: {min:0>2d}:{sec:0>2d}", end="\r")  # terminal timer
                 time.sleep(1)
                 remaining -= 1
+                if remaining==30:
+                    os.system('say "30 sekuntia"')
+                    remaining -= 2  # temp fix for system voice time delay
             # CTRL+C to interrupt task
             except KeyboardInterrupt:
                 end = time.time()
