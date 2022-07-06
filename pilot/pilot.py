@@ -112,7 +112,7 @@ task_map = {
     5: "Ohjelmiston asennus",
     6: "Tekstinkäsittelytehtävä",
     7: "Taulukkolaskentatehtävä",
-    8: "Myynti-ilmoitus",
+    8: "Työpaikkailmoitus",
     9: "Vakuutustehtävä",
     10: "Tiedonhakutehtävä",
     11: "Kela -tehtävä",

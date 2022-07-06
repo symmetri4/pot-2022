@@ -7,9 +7,10 @@
 ###
 
 library(DBI)  # reference: https://db.rstudio.com/databases/sqlite/
+library(tidyverse)
 
 # connect to pilot.db
-con <- dbConnect(RSQLite::SQLite(), "pilot.db")
+con <- dbConnect(RSQLite::SQLite(), "../pilot.db")
 
 # boxplots: elapsed time (inc. task success) by task
 tet <- function() {
@@ -37,9 +38,9 @@ tet <- function() {
     # filename
     pdf(file="pilot_graphs/elapsed_tasks.pdf")
     # generate and save boxplots
-    bounds <- boxplot(task_durs, xlab = "Task number", ylab="Time elapsed (s)", col=cols, xaxt="n", yaxt="n", ylim=c(0,180), cex.lab=0.9)
+    bounds <- boxplot(task_durs, xlab = "Task number", ylab="Time elapsed (s)", col=cols, outbg=cols, outpch=21, xaxt="n", yaxt="n", ylim=c(0,180), cex.lab=0.9)
     legend("bottomright", legend = c("[0,10)U(90,100]", "[10,30)U(70,90]", "[30,70]"), cex=0.75, border="black", title = "Success rate (%)", title.adj = 0.5, fill = c("#cc3333", "#ffcc00", "#99cc33")) 
-    title(main="Pilot task difficulty (tasks 1-17)")
+    title(main="Pilot task completion (tasks 1-17)")
     axis(side=1, lwd=0.3, at=seq(1,17,1), mgp=c(3,1,0), cex.axis=0.75)
     axis(side=2, lwd=0.3, at=seq(0,180,30), las=2, mgp=c(3,1,0), cex.axis=0.75)
     abline(h=180, col="#cc3333", lty=2)
@@ -71,14 +72,15 @@ pet <- function() {
     cols <- c()
     # loop through each participant
     for (i in ids) {
-        # durs
-        durs <- dbGetQuery(con, paste("SELECT time_elapsed as x FROM Tasks WHERE participant_id=",i,sep=""))$x
-        participants <- cbind(participants, durs)
         # task success
         successes <- dbGetQuery(con, paste("SELECT success as x FROM Tasks WHERE participant_id=",i,sep=""))$x
-        # round task success to 2 d.p.
+        # round task success percentage to 2 d.p.
         task_success <- append(task_success, round(sum(successes)/length(successes)*100, 2))
-        # append appropriate col
+        # durs
+        durs <- dbGetQuery(con, paste("SELECT time_elapsed as x FROM Tasks WHERE participant_id=",i,sep=""))$x
+        # bind to df
+        participants <- cbind(participants, durs)
+        # append appropriate colour
         if (task_success[length(task_success)]<10 || task_success[length(task_success)]>90) cols <- append(cols, "#cc3333") # red if success % in [0,10)U(90,100]
         else if (task_success[length(task_success)]>=10 & task_success[length(task_success)]<30) cols <- append(cols, "#ffcc00") # yellow if in [10,30)
         else if (task_success[length(task_success)]>=30 & task_success[length(task_success)]<=70) cols <- append(cols, "#99cc33") # green if in [30,70]
@@ -89,7 +91,7 @@ pet <- function() {
     # filename
     pdf(file="pilot_graphs/elapsed_participants.pdf")
     # generate and save boxplots
-    bounds <- boxplot(participants, xlab = "Participant ID", ylab="Time elapsed (s)", col=cols, xaxt="n", yaxt="n", ylim=c(0,180), cex.lab=0.9)
+    bounds <- boxplot(participants, xlab = "Participant ID", ylab="Time elapsed (s)", col=cols, outbg=cols, outpch=21, xaxt="n", yaxt="n", ylim=c(0,180), cex.lab=0.9)
     legend("bottomright", legend = c("[0,10)U(90,100]", "[10,30)U(70,90]", "[30,70]"), cex=0.75, border="black", title = "Success rate (%)", title.adj = 0.5, fill = c("#cc3333", "#ffcc00", "#99cc33"))
     title(main="Pilot participant success (tasks 1-17)")
     axis(side=1, lwd=0.3, at=seq(1,length(ids),1), mgp=c(3,1,0), cex.axis=0.75, labels=ids)
@@ -114,7 +116,7 @@ smw <- function() {
         # generate and save boxplots
         boxplot(nasa_tlx, ylab="Kuormitus", col="#ccccff", xaxt="n", yaxt="n", ylim=c(0,100), cex.lab=0.9)
         title(main=paste("NASA-TLX (task #",i,")",sep=""))
-        ### huom! alla
+        ### huom! alla todo
         mtext(side=1, paste("n = ",nrow(nasa_tlx),sep=""), col="#cc3333", at=0, adj=0, line=0, cex=0.5, las=1)
         ###
         axis(side=1, lwd=0.3, labels=c("Henkinen\nvaativuus", "Fyysinen\nvaativuus", "Ajallinen\nvaativuus", "Oma\nsuoriutuminen", "Vaivannäkö", "Turhautuneisuus"), at=seq(1,6,1), mgp=c(3,1,0), cex.axis=0.7, las=1, adj=1)
@@ -138,4 +140,56 @@ csv <- function() {
     for (i in seq(1,length(tables))) {
         write.csv(eval(parse(text=tables[i])), paste("pilot_csv/",tables[i],".csv",sep=""), row.names=FALSE)
     }
+}
+
+# PCA: task similarity (based on task instructions and optimal path)
+tpca <- function() {
+    # create dir if not exist
+    dir.create("pilot_graphs", showWarnings=FALSE)
+    data <- read.csv("optimal_path.csv", sep=";")
+    data <- t(data)  # transpose df (cols represent features and rows tasks)
+    colnames(data) <- c("min clicks", "min keys", "task depth", "words", "info")
+    results <- prcomp(data, scale=TRUE)  # scale=TRUE to standardise columns
+    # reverse signs
+    results$rotation <- (-1)*results$rotation
+    results$x <- (-1)*results$x
+    # filename
+    pdf(file="pilot_graphs/pca_tasks.pdf")
+    biplot(results, scale=0, cex=0.6, col=c("purple","red"), main="PCA: Task similarity (task instructions and optimal path)")  # scale=0 to ensure arrows represent loadings
+    dev.off()
+}
+
+# PCA: participant performance (based on time elapsed for tasks 1-17)
+ppca <- function() {
+    # create dir if not exist
+    dir.create("pilot_graphs", showWarnings=FALSE)
+    # empty data frame for participant data
+    participant_durs <- data.frame(matrix(NA,nrow=17,ncol=0))
+    # get number of participants
+    n <- dbGetQuery(con, "SELECT COUNT(*) as x FROM Participants")$x
+    # fetch participant ids
+    ids <- dbGetQuery(con, "SELECT DISTINCT identifier as x FROM Participants")$x
+    # fetch task durs for each participant
+    for (i in ids) {
+        durs <- dbGetQuery(con, paste("SELECT time_elapsed as x FROM Tasks WHERE participant_id=",i," ORDER BY task_no",sep=""))$x
+        successes <- dbGetQuery(con, paste("SELECT success as x FROM Tasks WHERE participant_id=",i," ORDER BY task_no",sep=""))$x
+        # failed tasks duration 03:00 (for instances where participant has given up early)
+        for (j in seq(1,length(successes))) {
+            if (successes[j]==0) durs[j] <- 180
+        }
+        participant_durs <- cbind(participant_durs, durs)
+    }
+    # rename df cols to ids
+    colnames(participant_durs) <- ids
+    rownames(participant_durs) <- paste("t", seq(1,17), sep="")
+    # pca
+    data <- t(participant_durs)
+    results <- prcomp(data, scale=FALSE)  # scale=FALSE as no need to standardise
+    # reverse signs
+    results$rotation <- (-1)*results$rotation
+    results$x <- (-1)*results$x
+    # filename
+    pdf(file="pilot_graphs/pca_participants.pdf")
+    biplot(results, scale=0, cex=0.6, col=c("purple","red"), main="PCA: Participant performance (time elapsed for tasks 1-17)")  # scale=0 to ensure arrows represent loadings
+    dev.off()
 }
