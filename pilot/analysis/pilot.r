@@ -193,3 +193,7 @@ ppca <- function() {
     biplot(results, scale=0, cex=0.6, col=c("purple","red"), main="PCA: Participant performance (time elapsed for tasks 1-17)")  # scale=0 to ensure arrows represent loadings
     dev.off()
 }
+
+# plotting variance explained by pc's
+# var_explained = results$sdev^2 / sum(results$sdev^2)
+# plot(x=c(1:length(no of pc's)), y=var_explained, type="b")
