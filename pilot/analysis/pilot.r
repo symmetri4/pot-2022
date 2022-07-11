@@ -1,11 +1,3 @@
-###
-# --- functionality ---
-# graph time elapsed by task: tet()
-# graph time elapsed by participant: pet()
-# graph nasa-tlx: smw()
-# export SQL tables to CSV: csv()
-###
-
 library(DBI)  # reference: https://db.rstudio.com/databases/sqlite/
 library(tidyverse)
 
@@ -105,9 +97,10 @@ pet <- function() {
 }
 
 # boxplots: nasa-tlx for each task
-smw <- function() {
+tlx <- function() {
     # create dir if not exist
     dir.create("pilot_graphs", showWarnings=FALSE)
+    # nasa-tlx for each task
     for (i in seq(1,17)) {
         # fetch data for each task
         nasa_tlx <- dbGetQuery(con, paste("SELECT hv,fv,av,os,vn,tur FROM LoadNasa WHERE task_no=",i,sep=""))
@@ -123,6 +116,9 @@ smw <- function() {
         axis(side=2, lwd=0.3, at=seq(0,100,10), las=2, mgp=c(3,1,0), cex.axis=0.75)
         dev.off()
     }
+    # nasa-tlx summary of all tasks
+    # to do: histograms for each dim
+    # to do: boxplot summary for all tasks
 }
 
 # SQL tables -> CSV
@@ -143,7 +139,7 @@ csv <- function() {
 }
 
 # PCA: task similarity (based on task instructions and optimal path)
-tpca <- function() {
+pca_op <- function() {
     # create dir if not exist
     dir.create("pilot_graphs", showWarnings=FALSE)
     data <- read.csv("optimal_path.csv", sep=";")
@@ -160,7 +156,7 @@ tpca <- function() {
 }
 
 # PCA: participant performance (based on time elapsed for tasks 1-17)
-ppca <- function() {
+pca_perf <- function() {
     # create dir if not exist
     dir.create("pilot_graphs", showWarnings=FALSE)
     # empty data frame for participant data
