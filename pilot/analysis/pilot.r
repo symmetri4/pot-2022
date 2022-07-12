@@ -104,21 +104,39 @@ tlx <- function() {
     for (i in seq(1,17)) {
         # fetch data for each task
         nasa_tlx <- dbGetQuery(con, paste("SELECT hv,fv,av,os,vn,tur FROM LoadNasa WHERE task_no=",i,sep=""))
+        # drop rows where data missing
+        nasa_tlx <- nasa_tlx[rowSums(nasa_tlx)>0,]
         # filename
-        pdf(file=paste("pilot_graphs/t",i,"_nasa-tlx.pdf",sep=""))
+        pdf(file=paste("pilot_graphs/nasa_tlx_box_",i,".pdf",sep=""))
         # generate and save boxplots
         boxplot(nasa_tlx, ylab="Kuormitus", col="#ccccff", xaxt="n", yaxt="n", ylim=c(0,100), cex.lab=0.9)
-        title(main=paste("NASA-TLX (task #",i,")",sep=""))
-        ### huom! alla todo
-        mtext(side=1, paste("n = ",nrow(nasa_tlx),sep=""), col="#cc3333", at=0, adj=0, line=0, cex=0.5, las=1)
-        ###
+        title(main=paste("NASA-TLX (Task ",i,", n = ",nrow(nasa_tlx),")",sep=""))
         axis(side=1, lwd=0.3, labels=c("Henkinen\nvaativuus", "Fyysinen\nvaativuus", "Ajallinen\nvaativuus", "Oma\nsuoriutuminen", "Vaivannäkö", "Turhautuneisuus"), at=seq(1,6,1), mgp=c(3,1,0), cex.axis=0.7, las=1, adj=1)
         axis(side=2, lwd=0.3, at=seq(0,100,10), las=2, mgp=c(3,1,0), cex.axis=0.75)
         dev.off()
     }
     # nasa-tlx summary of all tasks
-    # to do: histograms for each dim
-    # to do: boxplot summary for all tasks
+    nasa_tlx <- dbGetQuery(con, "SELECT * FROM LoadNasa")
+    # drop irrelevant columns
+    tlx_scores <- subset(nasa_tlx,select=-c(1:3))
+    # remove missing data (where sum(row)==0)
+    tlx_scores <- tlx_scores[rowSums(tlx_scores)>0,]
+    # map db abbreviations to full labels
+    tlx_map <- c("hv"="henkinen vaativuus", "fv"="fyysinen vaativuus", "av"="ajallinen vaativuus", "os"="oma suoriutuminen", "vn"="vaivannäkö", "tur"="turhautuneisuus")
+    for (i in c("hv","fv","av","os","vn","tur")) {
+        # filename
+        pdf(file=paste("pilot_graphs/nasa_tlx_hist_",i,".pdf",sep=""))
+        # histogram for each dim
+        hist(eval(parse(text=paste("tlx_scores$",i,sep=""))), col="#ccccff", main=paste("NASA-TLX: ", tlx_map[i], " (all attempts, n = ", nrow(tlx_scores), ")",sep=""), right=FALSE, breaks=10, xlab="Score")
+        dev.off()
+    }
+    # boxplot summary of each dim given all tasks
+    pdf(file="pilot_graphs/nasa_tlx_box_summary.pdf")
+    boxplot(tlx_scores, ylab="Kuormitus", col="#ccccff", xaxt="n", yaxt="n", ylim=c(0,100), cex.lab=0.9)
+    title(main=paste("NASA-TLX (all attempts, n = ",nrow(nasa_tlx),")",sep=""))
+    axis(side=1, lwd=0.3, labels=c("Henkinen\nvaativuus", "Fyysinen\nvaativuus", "Ajallinen\nvaativuus", "Oma\nsuoriutuminen", "Vaivannäkö", "Turhautuneisuus"), at=seq(1,6,1), mgp=c(3,1,0), cex.axis=0.7, las=1, adj=1)
+    axis(side=2, lwd=0.3, at=seq(0,100,10), las=2, mgp=c(3,1,0), cex.axis=0.75)
+    dev.off()
 }
 
 # SQL tables -> CSV
@@ -152,6 +170,33 @@ pca_op <- function() {
     # filename
     pdf(file="pilot_graphs/pca_tasks.pdf")
     biplot(results, scale=0, cex=0.6, col=c("purple","red"), main="PCA: Task similarity (task instructions and optimal path)")  # scale=0 to ensure arrows represent loadings
+    dev.off()
+}
+
+# PCA: task similarity (based on NASA-TLX medians)
+pca_tlx <- function() {
+    # create dir if not exist
+    dir.create("pilot_graphs", showWarnings=FALSE)
+    # nasa-tlx summary of all tasks (ordered)
+    nasa_tlx <- dbGetQuery(con, "SELECT * FROM LoadNasa ORDER BY task_no, participant_id")
+    # remove missing data (where sum(row)==0, only including tlx scores)
+    nasa_tlx <- nasa_tlx[rowSums(nasa_tlx[4:9])>0,]
+    # split df by tasks
+    nasa_tlx <- split(nasa_tlx, nasa_tlx$task_no)
+    # df for medians
+    tlx_medians <- data.frame(matrix(NA,nrow=17,ncol=0))
+    for (i in seq(1, 17)) {
+        for (j in c("hv","fv","av","os","vn","tur")) {
+            tlx_medians[i,j] <- median(nasa_tlx[[i]][,j])
+        }
+    }
+    results <- prcomp(tlx_medians, scale=FALSE)  # scale=FALSE as no need to standardise
+    # reverse signs
+    results$rotation <- (-1)*results$rotation
+    results$x <- (-1)*results$x
+    # filename
+    pdf(file="pilot_graphs/pca_tlx.pdf")
+    biplot(results, scale=0, cex=0.6, col=c("purple","red"), main="PCA: task similarity (based on NASA-TLX medians)")  # scale=0 to ensure arrows represent loadings
     dev.off()
 }
 
