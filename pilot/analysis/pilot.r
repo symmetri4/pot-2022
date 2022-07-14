@@ -4,7 +4,7 @@ library(tidyverse)
 # connect to pilot.db
 con <- dbConnect(RSQLite::SQLite(), "../pilot.db")
 
-# produce summary graphs (pdf files)
+# produce summary graphs (pdf files) + tables (csv)
 graphs <- function() {
     box_tet()
     box_pet()
@@ -156,10 +156,10 @@ csv <- function() {
     # create dir if not exist
     dir.create("pilot_csv", showWarnings=FALSE)
     # table names
-    tables <- c("tasks", "load", "trials", "participants")
+    tables <- c("tasks", "workload", "trials", "participants")
     # fetch tables
     tasks <- dbReadTable(con,"Tasks")
-    load <- dbReadTable(con,"LoadNasa")
+    workload <- dbReadTable(con,"LoadNasa")
     trials <- dbReadTable(con,"Trials")
     participants <- dbReadTable(con,"Participants")
     # write to csv
