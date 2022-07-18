@@ -6,6 +6,7 @@ con <- dbConnect(RSQLite::SQLite(), "../pilot.db")
 
 # produce summary graphs (pdf files) + tables (csv)
 graphs <- function() {
+    age()
     box_tet()
     box_pet()
     tlx()
@@ -13,6 +14,18 @@ graphs <- function() {
     pca_op()
     pca_tlx()
     # pca_perf()
+}
+
+# age summary
+age <- function() {
+    # create dir if not exist
+    dir.create("pilot_graphs", showWarnings=FALSE)
+    # fetch participant age data
+    age <- dbGetQuery(con, "SELECT age as x FROM Participants")$x
+    pdf(file="pilot_graphs/age.pdf")
+    hist(age, breaks=seq(20,65,15), xaxt="n", main="Pilot participant age", xlab="Age", ylab="Frequency", col="#ccccff")
+    axis(side=1, lwd=0.3, at=seq(20,65,length.out=4))
+    dev.off()
 }
 
 # boxplots: elapsed time (inc. task success) by task
@@ -29,7 +42,7 @@ box_tet <- function() {
         eval(parse(text=paste("t",i," <- durs",sep="")))
         # successes
         successes <- dbGetQuery(con, paste("SELECT success as x FROM Tasks WHERE task_no=",i,sep=""))$x
-        task_success <- append(task_success, sum(successes)/length(successes)*100)
+        task_success <- append(task_success, round(sum(successes)/length(successes)*100,2))
         # append appropriate col
         if (task_success[i]<10 || task_success[i]>90) cols <- append(cols, "#cc3333") # red if success % in [0,10)U(90,100]
         else if (task_success[i]>=10 & task_success[i]<30) cols <- append(cols, "#ffcc00") # yellow if in [10,30)
@@ -103,6 +116,7 @@ box_pet <- function() {
     abline(h=180, col="#cc3333", lty=2)
     mtext(side=4, "deadline", col="#cc3333", at=180, adj=0, line=0.1, cex=0.5, las=2)
     text(x=c(1:length(ids)), y=bounds$stats[1,]-5, paste(task_success,"%",sep=""), cex=0.5)
+    text(x=c(1:length(ids)), y=bounds$stats[1,]-10, paste(age,"v",sep=""), cex=0.5)
     # text(x=c(1:length(ids)), y=bounds$stats[1,]-10, paste(exp," (",age,"v)",sep=""), cex=0.5)
     # text(x=c(1:length(ids)), y=bounds$stats[1,]-15, ed, cex=0.5)
     dev.off()
