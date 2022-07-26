@@ -175,7 +175,7 @@ def trial_tasks(db: sqlite3.Connection, identifier: int):
                 time.sleep(1)
                 remaining -= 1
                 if remaining==30:
-                    os.system('say "30 sekuntia"')
+                    print('\a')  # alert bell for 30s left
                     remaining -= 2  # temp fix for system voice time delay
             # CTRL+C to interrupt task
             except KeyboardInterrupt:
